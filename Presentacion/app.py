@@ -420,8 +420,8 @@ def get_edges():
 
 
 @app.route("/")
-def index():
-    return render_template("index.html")
+def home():
+    return send_from_directory(".", "presentacion.html")
 
 
 @app.route("/presentacion")
