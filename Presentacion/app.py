@@ -421,7 +421,7 @@ def get_edges():
 
 @app.route("/")
 def home():
-    return send_from_directory(".", "presentacion.html")
+    return send_from_directory(resource_path("."), "presentacion.html")
 
 
 @app.route("/presentacion")
@@ -431,6 +431,11 @@ def presentacion():
 
 @app.route("/visualizador")
 def visualizador():
+    return render_template("index.html")
+
+
+@app.route("/debug")
+def debug():
     return render_template("index.html")
 
 
@@ -463,4 +468,5 @@ def api_data():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
