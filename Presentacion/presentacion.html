@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#07111f">
+    <title>Código completo · Uniform Cost Search</title>
+    <style>
+        :root {
+            --bg: #050913;
+            --panel: rgba(12, 24, 41, 0.94);
+            --line: rgba(255, 255, 255, 0.12);
+            --text: #f5f9ff;
+            --muted: #9eafc3;
+            --cyan: #35d7ff;
+            --lime: #98ff55;
+            --orange: #ffb454;
+            --pink: #ff82c8;
+            --code: #dcecff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            color: var(--text);
+            background: var(--bg);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 7% 8%, rgba(53, 215, 255, 0.14), transparent 25rem),
+                radial-gradient(circle at 92% 86%, rgba(152, 255, 85, 0.1), transparent 28rem),
+                linear-gradient(145deg, #050913, #081525 50%, #061019);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            opacity: 0.13;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(to bottom, black, transparent 85%);
+        }
+
+        button,
+        a {
+            font: inherit;
+        }
+
+        .deck {
+            position: relative;
+            width: 100vw;
+            height: 100dvh;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            padding: clamp(16px, 2.5vw, 34px) clamp(18px, 4vw, 58px) clamp(70px, 9vh, 88px);
+            visibility: hidden;
+            opacity: 0;
+            transform: translateY(12px);
+            pointer-events: none;
+            transition: opacity 200ms ease, transform 200ms ease, visibility 200ms;
+        }
+
+        .slide.active {
+            visibility: visible;
+            opacity: 1;
+            transform: none;
+            pointer-events: auto;
+        }
+
+        .shell {
+            width: min(1500px, 100%);
+            height: min(850px, 100%);
+            min-height: 0;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            gap: clamp(10px, 1.7vh, 18px);
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 20px;
+            align-items: end;
+        }
+
+        .eyebrow {
+            margin: 0 0 5px;
+            color: var(--cyan);
+            font-size: clamp(0.64rem, 0.8vw, 0.82rem);
+            font-weight: 850;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin-top: 0;
+        }
+
+        h1,
+        h2 {
+            margin-bottom: 0;
+            line-height: 0.98;
+            letter-spacing: -0.045em;
+        }
+
+        h1 {
+            font-size: clamp(2.7rem, 5.7vw, 5.8rem);
+        }
+
+        h2 {
+            font-size: clamp(1.8rem, 3.7vw, 3.55rem);
+        }
+
+        .subtitle {
+            max-width: 1050px;
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: clamp(0.78rem, 1vw, 0.98rem);
+            line-height: 1.4;
+        }
+
+        .index {
+            align-self: start;
+            padding: 8px 13px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: #dff7ff;
+            background: rgba(255, 255, 255, 0.055);
+            font-size: 0.72rem;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        .grid-2 {
+            min-width: 0;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: clamp(12px, 1.6vw, 22px);
+        }
+
+        .card {
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: clamp(17px, 1.8vw, 26px);
+            background: var(--panel);
+            box-shadow: 0 22px 70px rgba(0, 0, 0, 0.34);
+        }
+
+        .code-card {
+            display: grid;
+            grid-template-rows: 40px minmax(0, 1fr);
+            background: #030711;
+        }
+
+        .code-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 15px;
+            border-bottom: 1px solid var(--line);
+            color: #c4f1ff;
+            background: rgba(255, 255, 255, 0.045);
+            font-size: 0.7rem;
+            font-weight: 850;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .code-title span:last-child {
+            color: var(--muted);
+            font-size: 0.65rem;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        pre {
+            min-width: 0;
+            min-height: 0;
+            margin: 0;
+            padding: clamp(12px, 1.5vw, 20px);
+            overflow: hidden;
+            scrollbar-color: rgba(53, 215, 255, 0.35) transparent;
+        }
+
+        code {
+            color: var(--code);
+            font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+            font-size: clamp(0.88rem, 1.03vw, 1.08rem);
+            line-height: 1.42;
+            font-weight: 500;
+            tab-size: 4;
+            white-space: pre;
+            transition: font-size 140ms ease;
+        }
+
+        .compact code {
+            font-size: clamp(0.8rem, 0.92vw, 0.96rem);
+            line-height: 1.31;
+        }
+
+        .tok-keyword {
+            color: #ff7ab2;
+            font-weight: 700;
+        }
+
+        .tok-string {
+            color: #a8e66b;
+        }
+
+        .tok-number {
+            color: #ffbd70;
+        }
+
+        .tok-comment {
+            color: #74869d;
+            font-style: italic;
+        }
+
+        .tok-function {
+            color: #55d6ff;
+            font-weight: 700;
+        }
+
+        .tok-builtin {
+            color: #c6a0ff;
+        }
+
+        .tok-constant {
+            color: #ff9e64;
+            font-weight: 650;
+        }
+
+        .tok-operator {
+            color: #89ddff;
+        }
+
+        .manual {
+            border-top: 3px solid var(--orange);
+        }
+
+        .library {
+            border-top: 3px solid var(--lime);
+        }
+
+        .comparison-note {
+            color: var(--muted);
+        }
+
+        .comparison-note strong {
+            color: var(--orange);
+        }
+
+        .hero-card {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+            gap: 28px;
+            align-items: center;
+            padding: clamp(28px, 4.5vw, 66px);
+            background:
+                linear-gradient(125deg, rgba(53, 215, 255, 0.12), transparent 48%),
+                var(--panel);
+        }
+
+        .hero-card::after {
+            content: "</>";
+            position: absolute;
+            right: 4%;
+            bottom: -8%;
+            color: rgba(152, 255, 85, 0.065);
+            font-family: Consolas, monospace;
+            font-size: clamp(8rem, 20vw, 17rem);
+            font-weight: 950;
+            pointer-events: none;
+        }
+
+        .hero-card p {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 18px 0 0;
+            color: var(--muted);
+            font-size: clamp(0.95rem, 1.35vw, 1.22rem);
+            line-height: 1.5;
+        }
+
+        .contents {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 10px;
+        }
+
+        .contents div {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e5f7ff;
+            font-size: clamp(0.76rem, 0.95vw, 0.9rem);
+            font-weight: 750;
+        }
+
+        .contents span {
+            color: var(--cyan);
+            font-family: Consolas, monospace;
+            font-weight: 900;
+        }
+
+        .result-layout {
+            min-width: 0;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+            gap: clamp(12px, 1.6vw, 22px);
+        }
+
+        .result-card {
+            display: grid;
+            place-items: center;
+            padding: 26px;
+            text-align: center;
+            background:
+                linear-gradient(145deg, rgba(152, 255, 85, 0.12), rgba(53, 215, 255, 0.06)),
+                var(--panel);
+        }
+
+        .metric {
+            display: block;
+            color: var(--lime);
+            font-size: clamp(4.5rem, 10vw, 8.4rem);
+            font-weight: 950;
+            line-height: 0.9;
+            letter-spacing: -0.06em;
+        }
+
+        .route {
+            margin: 14px 0 0;
+            color: #eaffdf;
+            font-size: clamp(0.8rem, 1.1vw, 1rem);
+            font-weight: 800;
+            line-height: 1.5;
+        }
+
+        .demo-button {
+            display: inline-flex;
+            min-height: 46px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 22px;
+            padding: 0 20px;
+            border-radius: 14px;
+            color: #061019;
+            background: linear-gradient(135deg, var(--cyan), var(--lime));
+            font-size: 0.85rem;
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+        .demo-button:hover,
+        .demo-button:focus-visible {
+            transform: translateY(-2px);
+            filter: brightness(1.08);
+            outline: 2px solid rgba(255, 255, 255, 0.45);
+            outline-offset: 3px;
+        }
+
+        .footer {
+            position: fixed;
+            right: clamp(124px, 12vw, 170px);
+            bottom: 17px;
+            left: clamp(16px, 3vw, 44px);
+            z-index: 10;
+            display: grid;
+            grid-template-columns: auto minmax(100px, 360px) auto;
+            gap: 14px;
+            align-items: center;
+            color: var(--muted);
+            font-size: 0.72rem;
+            pointer-events: none;
+        }
+
+        .brand {
+            color: #dff8ff;
+            font-weight: 850;
+        }
+
+        .progress {
+            height: 5px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.11);
+        }
+
+        .bar {
+            width: 0;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--cyan), var(--lime));
+            transition: width 200ms ease;
+        }
+
+        .controls {
+            position: fixed;
+            right: clamp(14px, 2.3vw, 32px);
+            bottom: 17px;
+            z-index: 12;
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-button {
+            width: 43px;
+            height: 43px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            color: var(--text);
+            background: rgba(9, 18, 31, 0.9);
+            cursor: pointer;
+            font-size: 1.05rem;
+            font-weight: 900;
+        }
+
+        .nav-button:hover,
+        .nav-button:focus-visible {
+            border-color: rgba(53, 215, 255, 0.5);
+            background: rgba(53, 215, 255, 0.15);
+            outline: none;
+        }
+
+        .hint {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            z-index: 12;
+            color: rgba(158, 175, 195, 0.74);
+            font-size: 0.66rem;
+            font-weight: 750;
+        }
+
+        @media (max-height: 700px) and (min-width: 821px) {
+            .slide {
+                padding-top: 14px;
+                padding-bottom: 64px;
+            }
+
+            .shell {
+                gap: 8px;
+            }
+
+            h1 {
+                font-size: clamp(2.4rem, 4.7vw, 4.3rem);
+            }
+
+            h2 {
+                font-size: clamp(1.55rem, 3vw, 2.6rem);
+            }
+
+            .subtitle {
+                font-size: 0.73rem;
+            }
+
+            .code-card {
+                grid-template-rows: 35px minmax(0, 1fr);
+            }
+
+            code {
+                font-size: clamp(0.92rem, 1vw, 1rem);
+                line-height: 1.34;
+            }
+
+            .compact code {
+                font-size: clamp(0.86rem, 0.92vw, 0.94rem);
+                line-height: 1.25;
+            }
+
+            pre {
+                padding: 12px 16px;
+            }
+        }
+
+        @media (max-width: 820px) {
+            html,
+            body {
+                overflow-y: auto;
+            }
+
+            .deck {
+                min-height: 100dvh;
+                height: auto;
+            }
+
+            .slide {
+                position: relative;
+                display: none;
+                min-height: 100dvh;
+                height: auto;
+                padding: 22px 14px 86px;
+            }
+
+            .slide.active {
+                display: grid;
+            }
+
+            .shell {
+                height: auto;
+                min-height: calc(100dvh - 115px);
+            }
+
+            .header,
+            .grid-2,
+            .result-layout,
+            .hero-card {
+                grid-template-columns: 1fr;
+            }
+
+            .index {
+                justify-self: start;
+            }
+
+            .card {
+                min-height: 300px;
+            }
+
+            pre {
+                overflow: auto;
+            }
+
+            .hint {
+                display: none;
+            }
+
+            .footer {
+                right: 116px;
+                grid-template-columns: minmax(90px, 1fr) auto;
+            }
+
+            .brand {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="deck" aria-live="polite">
+        <section class="slide active" data-title="Código completo">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Uniform Cost Search</p>
+                        <h1>Presentación del código completo</h1>
+                        <p class="subtitle">El visualizador está en Flask; aquí se presenta la implementación Python del algoritmo.</p>
+                    </div>
+                    <span class="index">01 · Introducción</span>
+                </header>
+
+                <article class="card hero-card">
+                    <div>
+                        <p class="eyebrow">Objetivo</p>
+                        <h2>Encontrar el camino de menor costo en un grafo ponderado</h2>
+                        <p>
+                            El mismo algoritmo funciona con una cola de prioridad manual o con la librería
+                            estándar <strong>heapq</strong>. Esa es la única diferencia entre ambas versiones.
+                        </p>
+                    </div>
+                    <div class="contents">
+                        <div><span>01</span> Comparación de heapq</div>
+                        <div><span>02</span> Función uniform_cost_search</div>
+                        <div><span>03</span> Reconstrucción del camino</div>
+                        <div><span>04</span> Grafo, ejecución y resultado</div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="Comparación heapq">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Única diferencia entre versiones</p>
+                        <h2>heapq manual frente a la librería</h2>
+                        <p class="subtitle comparison-note">
+                            Después de este bloque, <strong>todo el código UCS es exactamente el mismo</strong>.
+                        </p>
+                    </div>
+                    <span class="index">02 · Comparación</span>
+                </header>
+
+                <div class="grid-2">
+                    <article class="card code-card manual">
+                        <div class="code-title"><span>Sin librería · implementación manual</span><span>heappop O(n)</span></div>
+                        <pre><code>class heapq:
+
+    def heappush(frontera, elemento):
+        frontera.append(elemento)
+
+    def heappop(frontera):
+        menor_indice = 0
+
+        for i in range(len(frontera)):
+            if frontera[i] &lt; frontera[menor_indice]:
+                menor_indice = i
+
+        return frontera.pop(menor_indice)</code></pre>
+                    </article>
+
+                    <article class="card code-card library">
+                        <div class="code-title"><span>Con librería · implementación oficial</span><span>push/pop O(log n)</span></div>
+                        <pre><code>import heapq
+
+
+# La librería ya proporciona:
+#
+# heapq.heappush(frontera, elemento)
+# heapq.heappop(frontera)
+#
+# No es necesario implementar la clase.
+#
+# El resto del programa permanece igual.</code></pre>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide" data-title="UCS inicialización">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Código compartido · Parte 1 de 3</p>
+                        <h2>Inicialización de las estructuras</h2>
+                    </div>
+                    <span class="index">03 · uniform_cost_search</span>
+                </header>
+
+                <article class="card code-card">
+                    <div class="code-title"><span>uniform_cost_search(graph, start, goal)</span><span>líneas iniciales</span></div>
+                    <pre><code>def uniform_cost_search(graph, start, goal):
+    node = start
+    costo_inicial = 0
+
+    frontera = []
+    heapq.heappush(frontera, (costo_inicial, node))
+
+    explorados = set()
+
+    parent = {}
+    parent[start] = None
+
+    costos = {}
+    costos[start] = 0
+
+    if start == goal:
+        return parent, 0</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="UCS ciclo">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Código compartido · Parte 2 de 3</p>
+                        <h2>Selección del nodo de menor costo</h2>
+                    </div>
+                    <span class="index">04 · uniform_cost_search</span>
+                </header>
+
+                <article class="card code-card">
+                    <div class="code-title"><span>Continuación de uniform_cost_search</span><span>ciclo principal</span></div>
+                    <pre><code>    while True:
+
+        if len(frontera) == 0:
+            return {}, None
+
+        costo_actual, node = heapq.heappop(frontera)
+
+        if node in explorados:
+            continue
+
+        if node == goal:
+            return parent, costo_actual
+
+        explorados.add(node)</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="UCS vecinos">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Código compartido · Parte 3 de 3</p>
+                        <h2>Expansión de vecinos y actualización de costos</h2>
+                    </div>
+                    <span class="index">05 · uniform_cost_search</span>
+                </header>
+
+                <article class="card code-card">
+                    <div class="code-title"><span>Continuación de uniform_cost_search</span><span>ciclo de vecinos</span></div>
+                    <pre><code>        for child in graph[node]:
+
+            nuevo_costo = costo_actual + graph[node][child]
+
+            if child not in explorados and child not in costos:
+                parent[child] = node
+                costos[child] = nuevo_costo
+                heapq.heappush(
+                    frontera,
+                    (nuevo_costo, child)
+                )
+
+            elif child in costos and nuevo_costo &lt; costos[child]:
+                parent[child] = node
+                costos[child] = nuevo_costo
+                heapq.heappush(
+                    frontera,
+                    (nuevo_costo, child)
+                )</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="Reconstrucción">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Código compartido</p>
+                        <h2>Reconstrucción completa del camino</h2>
+                        <p class="subtitle">Se recorren los padres desde la meta hasta el inicio y luego se invierte la lista.</p>
+                    </div>
+                    <span class="index">06 · reconstruct_path</span>
+                </header>
+
+                <article class="card code-card">
+                    <div class="code-title"><span>reconstruct_path(sol, start, goal)</span><span>función completa</span></div>
+                    <pre><code>def reconstruct_path(sol, start, goal):
+    if start == goal:
+        return [start]
+
+    if goal not in sol:
+        return []
+
+    path = [goal]
+    s = goal
+
+    while s:
+        padre = sol.get(s)
+
+        if padre is None:
+            break
+
+        path.append(padre)
+        s = padre
+
+        if s == start:
+            break
+
+    return list(reversed(path))</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="Grafo oeste">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Datos del programa · Parte 1 de 4</p>
+                        <h2>Grafo completo de Rumania</h2>
+                        <p class="subtitle">Cada ciudad contiene sus vecinos y el peso de cada conexión.</p>
+                    </div>
+                    <span class="index">07 · graph</span>
+                </header>
+
+                <article class="card code-card compact">
+                    <div class="code-title"><span>graph · Arad hasta Lugoj</span><span>1 / 4</span></div>
+                    <pre><code>graph = {
+    'arad': {
+        'zerind': 75,
+        'timisoara': 118,
+        'sibiu': 140
+    },
+    'zerind': {
+        'arad': 75,
+        'oradea': 71
+    },
+    'oradea': {
+        'zerind': 71,
+        'sibiu': 151
+    },
+    'timisoara': {
+        'arad': 118,
+        'lugoj': 111
+    },
+    'lugoj': {
+        'timisoara': 111,
+        'mehadia': 70
+    },</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="Grafo centro">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Datos del programa · Parte 2 de 4</p>
+                        <h2>Grafo completo de Rumania</h2>
+                    </div>
+                    <span class="index">08 · graph</span>
+                </header>
+
+                <article class="card code-card compact">
+                    <div class="code-title"><span>graph · Mehadia hasta Fagaras</span><span>2 / 4</span></div>
+                    <pre><code>    'mehadia': {
+        'lugoj': 70,
+        'drobeta': 75
+    },
+    'drobeta': {
+        'mehadia': 75,
+        'craiova': 120
+    },
+    'craiova': {
+        'drobeta': 120,
+        'rimnicu_vilcea': 146,
+        'pitesti': 138
+    },
+    'sibiu': {
+        'arad': 140,
+        'oradea': 151,
+        'fagaras': 99,
+        'rimnicu_vilcea': 80
+    },
+    'fagaras': {
+        'sibiu': 99,
+        'bucharest': 211
+    },</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="Grafo sur">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Datos del programa · Parte 3 de 4</p>
+                        <h2>Grafo completo de Rumania</h2>
+                    </div>
+                    <span class="index">09 · graph</span>
+                </header>
+
+                <article class="card code-card compact">
+                    <div class="code-title"><span>graph · Rimnicu Vilcea hasta Giurgiu</span><span>3 / 4</span></div>
+                    <pre><code>    'rimnicu_vilcea': {
+        'sibiu': 80,
+        'craiova': 146,
+        'pitesti': 97
+    },
+    'pitesti': {
+        'rimnicu_vilcea': 97,
+        'craiova': 138,
+        'bucharest': 101
+    },
+    'bucharest': {
+        'fagaras': 211,
+        'pitesti': 101,
+        'giurgiu': 90,
+        'urziceni': 85
+    },
+    'giurgiu': {
+        'bucharest': 90
+    },</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="Grafo este">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Datos del programa · Parte 4 de 4</p>
+                        <h2>Grafo completo de Rumania</h2>
+                    </div>
+                    <span class="index">10 · graph</span>
+                </header>
+
+                <article class="card code-card compact">
+                    <div class="code-title"><span>graph · Urziceni hasta Neamt</span><span>4 / 4</span></div>
+                    <pre><code>    'urziceni': {
+        'bucharest': 85,
+        'hirsova': 98,
+        'vaslui': 142
+    },
+    'hirsova': {
+        'urziceni': 98,
+        'eforie': 86
+    },
+    'eforie': {
+        'hirsova': 86
+    },
+    'vaslui': {
+        'urziceni': 142,
+        'iasi': 92
+    },
+    'iasi': {
+        'vaslui': 92,
+        'neamt': 87
+    },
+    'neamt': {
+        'iasi': 87
+    }
+}</code></pre>
+                </article>
+            </div>
+        </section>
+
+        <section class="slide" data-title="Ejecución">
+            <div class="shell">
+                <header class="header">
+                    <div>
+                        <p class="eyebrow">Bloque principal y salida</p>
+                        <h2>Ejecución completa del ejemplo</h2>
+                    </div>
+                    <span class="index">11 · Resultado</span>
+                </header>
+
+                <div class="result-layout">
+                    <article class="card result-card">
+                        <div>
+                            <span class="metric">418</span>
+                            <h3>Costo total</h3>
+                            <p class="route">Arad → Sibiu → Rimnicu Vilcea → Pitesti → Bucharest</p>
+                            <a class="demo-button" href="http://127.0.0.1:5000/" target="_blank" rel="noopener">
+                                Abrir visualizador ↗
+                            </a>
+                        </div>
+                    </article>
+
+                    <article class="card code-card">
+                        <div class="code-title"><span>if __name__ == "__main__"</span><span>ejecución y salida</span></div>
+                        <pre><code>if __name__ == '__main__':
+    start = 'arad'
+    goal = 'bucharest'
+
+    sol, costo_total = uniform_cost_search(
+        graph,
+        start,
+        goal
+    )
+
+    print("sol:", sol)
+
+    path = reconstruct_path(sol, start, goal)
+
+    print("path:", path)
+    print("costo total:", costo_total)</code></pre>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="hint">← → navegar · F pantalla completa</div>
+
+    <footer class="footer">
+        <span class="brand">Código UCS</span>
+        <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
+        <span id="counter">1 / 11</span>
+    </footer>
+
+    <nav class="controls" aria-label="Controles de la presentación">
+        <button class="nav-button" id="prevButton" type="button" aria-label="Diapositiva anterior">←</button>
+        <button class="nav-button" id="nextButton" type="button" aria-label="Diapositiva siguiente">→</button>
+    </nav>
+
+    <script>
+        const pythonKeywords = new Set([
+            "and", "as", "assert", "async", "await", "break", "class",
+            "continue", "def", "del", "elif", "else", "except", "finally",
+            "for", "from", "global", "if", "import", "in", "is", "lambda",
+            "nonlocal", "not", "or", "pass", "raise", "return", "try",
+            "while", "with", "yield"
+        ]);
+        const pythonBuiltins = new Set([
+            "dict", "enumerate", "float", "int", "len", "list", "print",
+            "range", "reversed", "set", "str", "tuple"
+        ]);
+        const pythonConstants = new Set(["True", "False", "None"]);
+
+        function escapeCode(value) {
+            return value
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;");
+        }
+
+        function highlightPython(source) {
+            let html = "";
+            let index = 0;
+            let expectsFunctionName = false;
+
+            while (index < source.length) {
+                const char = source[index];
+
+                if (char === "#") {
+                    const end = source.indexOf("\n", index);
+                    const finalIndex = end === -1 ? source.length : end;
+                    html += `<span class="tok-comment">${escapeCode(source.slice(index, finalIndex))}</span>`;
+                    index = finalIndex;
+                    continue;
+                }
+
+                if (char === "'" || char === '"') {
+                    const quote = char;
+                    const triple = source.slice(index, index + 3) === quote.repeat(3);
+                    const delimiter = triple ? quote.repeat(3) : quote;
+                    let end = index + delimiter.length;
+
+                    while (end < source.length) {
+                        if (source[end] === "\\") {
+                            end += 2;
+                            continue;
+                        }
+                        if (source.slice(end, end + delimiter.length) === delimiter) {
+                            end += delimiter.length;
+                            break;
+                        }
+                        end += 1;
+                    }
+
+                    html += `<span class="tok-string">${escapeCode(source.slice(index, end))}</span>`;
+                    index = end;
+                    continue;
+                }
+
+                if (/[A-Za-z_]/.test(char)) {
+                    let end = index + 1;
+                    while (end < source.length && /[A-Za-z0-9_]/.test(source[end])) end += 1;
+                    const word = source.slice(index, end);
+                    let className = "";
+
+                    if (expectsFunctionName) {
+                        className = "tok-function";
+                        expectsFunctionName = false;
+                    } else if (pythonKeywords.has(word)) {
+                        className = "tok-keyword";
+                        expectsFunctionName = word === "def" || word === "class";
+                    } else if (pythonBuiltins.has(word)) {
+                        className = "tok-builtin";
+                    } else if (pythonConstants.has(word)) {
+                        className = "tok-constant";
+                    } else {
+                        const remaining = source.slice(end);
+                        if (/^\s*\(/.test(remaining)) className = "tok-function";
+                    }
+
+                    html += className
+                        ? `<span class="${className}">${word}</span>`
+                        : word;
+                    index = end;
+                    continue;
+                }
+
+                if (/\d/.test(char)) {
+                    let end = index + 1;
+                    while (end < source.length && /[\d._]/.test(source[end])) end += 1;
+                    html += `<span class="tok-number">${source.slice(index, end)}</span>`;
+                    index = end;
+                    continue;
+                }
+
+                if ("=+-*/%<>!".includes(char)) {
+                    let end = index + 1;
+                    while (end < source.length && "=+-*/%<>!".includes(source[end])) end += 1;
+                    html += `<span class="tok-operator">${escapeCode(source.slice(index, end))}</span>`;
+                    index = end;
+                    continue;
+                }
+
+                html += escapeCode(char);
+                index += 1;
+            }
+
+            return html;
+        }
+
+        document.querySelectorAll("pre code").forEach((block) => {
+            block.innerHTML = highlightPython(block.textContent);
+        });
+
+        function fitCodeBlock(block) {
+            const container = block.closest("pre");
+            if (!container || container.clientWidth === 0 || container.clientHeight === 0) return;
+
+            const isCompact = block.closest(".compact") !== null;
+            const minimum = isCompact ? 13 : 14;
+            const maximum = isCompact ? 24 : 27;
+            const containerStyle = getComputedStyle(container);
+            const blockStyle = getComputedStyle(block);
+            const horizontalPadding =
+                parseFloat(containerStyle.paddingLeft) +
+                parseFloat(containerStyle.paddingRight);
+            const verticalPadding =
+                parseFloat(containerStyle.paddingTop) +
+                parseFloat(containerStyle.paddingBottom);
+            const safetyWidth = 42;
+            const safetyHeight = 30;
+            const availableWidth =
+                container.clientWidth - horizontalPadding - safetyWidth;
+            const availableHeight =
+                container.clientHeight - verticalPadding - safetyHeight;
+            const lineHeightRatio = isCompact ? 1.25 : 1.36;
+            const lines = block.textContent.replace(/\r/g, "").split("\n");
+            const canvas = fitCodeBlock.canvas ||
+                (fitCodeBlock.canvas = document.createElement("canvas"));
+            const context = canvas.getContext("2d");
+            const measuringSize = 100;
+
+            context.font = [
+                blockStyle.fontStyle,
+                blockStyle.fontWeight,
+                `${measuringSize}px`,
+                blockStyle.fontFamily
+            ].join(" ");
+
+            const longestLineWidth = Math.max(
+                1,
+                ...lines.map((line) => context.measureText(line || " ").width)
+            );
+            const widthLimitedSize =
+                (availableWidth / longestLineWidth) * measuringSize;
+            const heightLimitedSize =
+                availableHeight / Math.max(1, lines.length * lineHeightRatio);
+            const fittedSize = Math.max(
+                minimum,
+                Math.min(maximum, widthLimitedSize, heightLimitedSize)
+            );
+
+            block.style.display = "block";
+            block.style.width = "auto";
+            block.style.maxWidth = "100%";
+            block.style.fontSize = `${Math.floor(fittedSize * 10) / 10}px`;
+            block.style.lineHeight = String(lineHeightRatio);
+        }
+
+        function fitAllCodeBlocks() {
+            if (window.innerWidth <= 820) return;
+            document.querySelectorAll("pre code").forEach(fitCodeBlock);
+        }
+
+        const slides = [...document.querySelectorAll(".slide")];
+        const counter = document.getElementById("counter");
+        const bar = document.getElementById("bar");
+        const prevButton = document.getElementById("prevButton");
+        const nextButton = document.getElementById("nextButton");
+        let current = 0;
+
+        function showSlide(index) {
+            current = Math.max(0, Math.min(index, slides.length - 1));
+
+            slides.forEach((slide, slideIndex) => {
+                const active = slideIndex === current;
+                slide.classList.toggle("active", active);
+                slide.setAttribute("aria-hidden", String(!active));
+            });
+
+            counter.textContent = `${current + 1} / ${slides.length}`;
+            bar.style.width = `${((current + 1) / slides.length) * 100}%`;
+            document.title = `${slides[current].dataset.title} · Uniform Cost Search`;
+            history.replaceState(null, "", `#${current + 1}`);
+            requestAnimationFrame(fitAllCodeBlocks);
+        }
+
+        function nextSlide() {
+            showSlide(current + 1);
+        }
+
+        function previousSlide() {
+            showSlide(current - 1);
+        }
+
+        prevButton.addEventListener("click", previousSlide);
+        nextButton.addEventListener("click", nextSlide);
+
+        document.addEventListener("keydown", (event) => {
+            const interactive = ["A", "BUTTON"].includes(event.target.tagName);
+
+            if (["ArrowRight", "PageDown", " "].includes(event.key) && !interactive) {
+                event.preventDefault();
+                nextSlide();
+            }
+
+            if (["ArrowLeft", "PageUp"].includes(event.key)) {
+                event.preventDefault();
+                previousSlide();
+            }
+
+            if (event.key === "Home") {
+                event.preventDefault();
+                showSlide(0);
+            }
+
+            if (event.key === "End") {
+                event.preventDefault();
+                showSlide(slides.length - 1);
+            }
+
+            if (event.key.toLowerCase() === "f") {
+                event.preventDefault();
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen?.();
+                } else {
+                    document.exitFullscreen?.();
+                }
+            }
+        });
+
+        let touchStartX = 0;
+
+        document.addEventListener("touchstart", (event) => {
+            touchStartX = event.changedTouches[0].screenX;
+        }, { passive: true });
+
+        document.addEventListener("touchend", (event) => {
+            const delta = event.changedTouches[0].screenX - touchStartX;
+            if (Math.abs(delta) > 60) {
+                delta < 0 ? nextSlide() : previousSlide();
+            }
+        }, { passive: true });
+
+        const requestedSlide = Number.parseInt(location.hash.slice(1), 10);
+        showSlide(Number.isFinite(requestedSlide) ? requestedSlide - 1 : 0);
+
+        let resizeTimer;
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(fitAllCodeBlocks, 120);
+        });
+
+        document.fonts.ready.then(() => {
+            requestAnimationFrame(fitAllCodeBlocks);
+        });
+    </script>
+</body>
+</html>

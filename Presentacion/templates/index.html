@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Uniform Cost Search - Visualizador</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <main class="app">
+        <section class="topbar">
+            <div class="title-box">
+                <h1>Uniform Cost Search</h1>
+                <p>Visualización paso a paso del grafo de Rumania</p>
+            </div>
+
+            <div class="select-box">
+                <label>Inicio</label>
+                <select id="startSelect"></select>
+            </div>
+
+            <div class="select-box">
+                <label>Meta</label>
+                <select id="goalSelect"></select>
+            </div>
+
+            <div class="buttons">
+                <button id="btnStart">Inicio</button>
+                <button id="btnPrev">◀</button>
+                <button id="btnNext">▶</button>
+                <button id="btnEnd">Final</button>
+            </div>
+        </section>
+
+        <section class="progress-row">
+            <input type="range" id="stepRange" min="0" max="0" value="0">
+            <span id="stepCounter">Paso 0 / 0</span>
+        </section>
+
+        <section class="legend">
+            <div><span class="dot current"></span>Nodo actual</div>
+            <div><span class="dot explored"></span>Explorados</div>
+            <div><span class="dot frontier"></span>Frontera</div>
+            <div><span class="dot final"></span>Camino final</div>
+        </section>
+
+        <section class="content">
+            <div class="graph-panel">
+                <svg
+                    id="graphSvg"
+                    viewBox="0 0 1200 720"
+                    preserveAspectRatio="xMidYMid meet"
+                    role="img"
+                    aria-label="Grafo de ciudades de Rumania con las distancias entre nodos"
+                ></svg>
+            </div>
+
+            <aside class="info-panel">
+                <div class="panel-header">
+                    <h2 id="panelStep">Paso 0</h2>
+                    <p id="panelSubtitle">Uniform Cost Search</p>
+                </div>
+
+                <div class="info-block">
+                    <h3>Acción</h3>
+                    <p id="actionText">-</p>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-block small">
+                        <h3>Nodo actual</h3>
+                        <p id="currentNode">-</p>
+                    </div>
+
+                    <div class="info-block small">
+                        <h3>Costo final</h3>
+                        <p id="totalCost">-</p>
+                    </div>
+                </div>
+
+                <div class="info-block">
+                    <h3>Explorados</h3>
+                    <p id="exploredNodes">-</p>
+                </div>
+
+                <div class="info-block">
+                    <h3>Frontera / Heapq interno</h3>
+                    <p id="frontierNodes">-</p>
+                </div>
+
+                <div class="info-block">
+                    <h3>Orden por menor costo</h3>
+                    <p id="orderedFrontier">-</p>
+                </div>
+
+                <div class="result-box">
+                    <h3>Ruta final</h3>
+                    <p id="finalPath">-</p>
+                </div>
+            </aside>
+        </section>
+
+        <section class="keyboard-help">
+            Controles: ← anterior | → siguiente | espacio siguiente | Home inicio | End final
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
